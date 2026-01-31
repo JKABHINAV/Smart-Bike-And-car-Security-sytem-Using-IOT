@@ -1,0 +1,61 @@
+#include <SoftwareSerial.h>
+
+// Create a software serial port for GSM module (RX, TX)
+SoftwareSerial gsmSerial(7, 8);
+
+const int switchPin = 2; 
+bool callMade = false; 
+
+void setup() {
+  Serial.begin(9600);
+  gsmSerial.begin(9600);
+  
+  pinMode(switchPin, INPUT_PULLUP);
+  delay(1000); 
+
+  Serial.println("System Initializing...");
+  gsmSerial.println("AT"); 
+  delay(1000); 
+
+  if (gsmSerial.available()) {
+    String response = gsmSerial.readString();
+    if (response.indexOf("OK") >= 0) {
+      Serial.println("GSM Module Ready.");
+    } else {
+      Serial.println("GSM Error: Check connections/Power.");
+    }
+  }
+}
+
+void loop() {
+  int switchState = digitalRead(switchPin);
+
+  // Trigger call when switch is activated
+  // Note: Using INPUT_PULLUP, so 'LOW' usually means 'Triggered'
+  if (switchState == LOW && !callMade) {
+    Serial.println("Security Alert: Trigger Detected!");
+    makeCall("+91XXXXXXXXXX"); // <--- HIDDEN NUMBER
+    callMade = true; 
+    delay(500); 
+  }
+
+  if (switchState == HIGH) {
+    callMade = false; 
+  }
+
+  if (gsmSerial.available()) {
+    String response = gsmSerial.readString();
+    Serial.println("GSM Status: " + response);
+  }
+}
+
+void makeCall(String phoneNumber) {
+  // ATD = Dial command
+  gsmSerial.print("ATD" + phoneNumber + ";\r"); 
+  Serial.println("Dialing Protected Number...");
+  delay(10000); 
+  
+  // ATH = Hang up
+  gsmSerial.print("ATH\r"); 
+  Serial.println("Call sequence completed.");
+}
